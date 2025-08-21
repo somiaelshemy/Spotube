@@ -1,24 +1,32 @@
+const fs = require('fs');
+const request = require('request');
 const querystring = require('querystring');
-var request = require('request');
 
-const utils = require('../utils');
+const utils = require('../utils/utils');
 
-var trackArr = new Array();
+const stream = fs.createWriteStream('./tracks.json', { flags: 'w' });
 
-function getTracks(access_token) {
-  var options = {
-    url: `https://api.spotify.com/v1/playlists/${process.env.PLAYLIST_ID}/tracks`,
+function fetchTracks(
+  access_token,
+  url = `https://api.spotify.com/v1/playlists/${process.env.PLAYLIST_ID}/tracks`
+) {
+  if (!url) return;
+  const options = {
+    url,
     headers: { Authorization: 'Bearer ' + access_token },
     json: true,
   };
 
   request.get(options, function (error, response, body) {
-    body.items.map((el) =>
-      console.log(
-        el.track.name,
-        el.track.artists.map((artist) => artist.name)
-      )
-    );
+    for (const item of body.items) {
+      const track = {
+        name: item.track.name,
+        artists: item.track.artists.map((artist) => artist.name),
+      };
+      stream.write(JSON.stringify(track, null, 2));
+      stream.write(',\n');
+    }
+    fetchTracks(access_token, body.next);
   });
 }
 
@@ -78,7 +86,7 @@ exports.handleCallback = async (req, res) => {
           json: true,
         };
         request.get(options, function () {
-          getTracks(access_token);
+          fetchTracks(access_token);
         });
       }
     });
