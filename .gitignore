@@ -1,3 +1,5 @@
 node_modules/
 .env
 tracks.json
+client_secret.json
+youtube-creds.json
