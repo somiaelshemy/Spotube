@@ -33,6 +33,7 @@ const getNewToken = async (oauth2Client, res) => {
   const authUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: SCOPES,
+    prompt: 'consent',
   });
   res.redirect(authUrl);
 };
