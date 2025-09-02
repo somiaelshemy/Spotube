@@ -1,34 +1,28 @@
 const fs = require('fs').promises;
 const fsc = require('fs');
 const { google } = require('googleapis');
-const { getYoutubeOauthClient } = require('../utils/utils');
+const OAuth2 = google.auth.OAuth2;
 
 // If modifying these scopes, delete your previously saved credentials
 // at ~/.credentials/youtube-nodejs-quickstart.json
-var SCOPES = ['https://www.googleapis.com/auth/youtube.readonly'];
+var SCOPES = ['https://www.googleapis.com/auth/youtube'];
 var TOKEN_DIR = './credentials/';
 var TOKEN_PATH = TOKEN_DIR + 'youtube-creds.json';
 
-exports.ytAuth = async (req, res) => {
-  const oauth2Client = await getYoutubeOauthClient();
+const getYoutubeOauthClient = async () => {
   try {
-    const token = await fs.readFile(TOKEN_PATH);
-    oauth2Client.credentials = JSON.parse(token);
-    // getChannel(oauth2Client);
-    console.log('YouTube Auth Success');
+    const content = await fs.readFile('client_secret.json', 'utf8');
+    const credentials = JSON.parse(content);
+    var clientSecret = credentials.web.client_secret;
+    var clientId = credentials.web.client_id;
+    var redirectUrl = credentials.web.redirect_uris[0];
+    return new OAuth2(clientId, clientSecret, redirectUrl);
   } catch (error) {
-    await getNewToken(oauth2Client, res);
+    console.log('Error loading client secret file: ' + error);
+    return null;
   }
 };
 
-/**
- * Get and store new token after prompting for user authorization, and then
- * execute the given callback with the authorized OAuth2 client.
- *
- * @param {google.auth.OAuth2} oauth2Client The OAuth2 client to get token for.
- * @param {getEventsCallback} callback The callback to call with the authorized
- *     client.
- */
 const getNewToken = async (oauth2Client, res) => {
   const authUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline',
@@ -38,11 +32,6 @@ const getNewToken = async (oauth2Client, res) => {
   res.redirect(authUrl);
 };
 
-/**
- * Store token to disk be used in later program executions.
- *
- * @param {Object} token The token to store to disk.
- */
 const storeToken = async (token) => {
   try {
     fsc.mkdirSync(TOKEN_DIR);
@@ -59,54 +48,48 @@ const storeToken = async (token) => {
   });
 };
 
-/**
- * Lists the names and IDs of up to 10 files.
- *
- * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
- */
-function getChannel(auth) {
-  var service = google.youtube('v3');
-  service.channels.list(
-    {
-      auth: auth,
-      part: 'snippet,contentDetails,statistics',
-      forUsername: 'GoogleDevelopers',
-    },
-    function (err, response) {
-      if (err) {
-        console.log('The API returned an error: ' + err);
-        return;
-      }
-      var channels = response.data.items;
-      if (channels.length == 0) {
-        console.log('No channel found.');
-      } else {
-        console.log(
-          "This channel's ID is %s. Its title is '%s', and " +
-            'it has %s views.',
-          channels[0].id,
-          channels[0].snippet.title,
-          channels[0].statistics.viewCount
-        );
-      }
-    }
-  );
-}
+exports.ytAuth = async (req, res, next) => {
+  const oauth2Client = await getYoutubeOauthClient();
+  try {
+    const token = await fs.readFile(TOKEN_PATH);
+    oauth2Client.credentials = JSON.parse(token);
+    req.oauth2Client = oauth2Client;
+    console.log('YouTube Auth Success');
+    next();
+  } catch (error) {
+    await getNewToken(oauth2Client, res);
+  }
+};
 
-exports.handleCallback = async (req, res) => {
+exports.handleCallback = async (req, res, next) => {
   const code = req.query.code;
   const oauth2Client = await getYoutubeOauthClient();
   try {
-    oauth2Client.getToken(code, async function (err, token) {
-      if (err) {
-        return new Error('Error while trying to retrieve access token');
-      }
-      oauth2Client.credentials = token;
-      await storeToken(token);
-    });
-    // getChannel(oauth2Client);
-    res.status(200).send('YouTube Auth Success');
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.credentials = tokens;
+    req.oauth2Client = oauth2Client;
+    await storeToken(tokens);
   } catch (error) {
-    res.status(500).send('YouTube Auth Failed');
+    return res.status(500).send('YouTube Auth Failed');
   }
+  next();
 };
+
+exports.createPlaylist = async (req, res, next) => {
+  const service = google.youtube({ version: 'v3', auth: req.oauth2Client });
+  service.playlists.insert({
+    part: ['snippet', 'status'],
+    requestBody: {
+      snippet: {
+        title: 'Spotube',
+        description: 'came from spotify btw',
+      },
+      status: {
+        privacyStatus: 'private',
+      },
+    },
+  });
+  next();
+};
+
+exports.importTracks = async (req, res, nex) => {};

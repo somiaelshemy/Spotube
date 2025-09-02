@@ -10,7 +10,18 @@ app.use(express.json());
 app.use(cors()).use(cookieParser());
 
 app.get('/', spotifyController.startScript);
-app.get('/ytauth', youtubeController.ytAuth);
 app.get('/callback', spotifyController.handleCallback);
-app.get('/oauth2callback', youtubeController.handleCallback);
+
+app.get(
+  '/playlist',
+  youtubeController.ytAuth,
+  youtubeController.createPlaylist,
+  youtubeController.importTracks
+);
+app.get(
+  '/oauth2callback',
+  youtubeController.handleCallback,
+  youtubeController.createPlaylist,
+  youtubeController.importTracks
+);
 module.exports = app;

@@ -2,3 +2,4 @@ node_modules/
 .env
 client_secret.json
 youtube-creds.json
+tracks.json
