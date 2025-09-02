@@ -6,6 +6,7 @@ const utils = require('../utils/utils');
 const ytmusic = require('./ytmusic');
 
 const stream = fs.createWriteStream('./tracks.json', { flags: 'w' });
+
 function fetchTracks(
   access_token,
   url = `https://api.spotify.com/v1/playlists/${process.env.PLAYLIST_ID}/tracks`
@@ -91,5 +92,5 @@ exports.handleCallback = async (req, res) => {
       }
     });
   }
-  res.redirect('http://localhost:3000/ytauth');
+  res.redirect('http://localhost:3000/playlist');
 };
