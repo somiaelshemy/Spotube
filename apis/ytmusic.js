@@ -1,6 +1,9 @@
 const fs = require('fs').promises;
 const fsc = require('fs');
+const StreamArray = require('stream-json/streamers/StreamArray');
+
 const { google } = require('googleapis');
+const { request } = require('http');
 const OAuth2 = google.auth.OAuth2;
 
 // If modifying these scopes, delete your previously saved credentials
@@ -76,8 +79,13 @@ exports.handleCallback = async (req, res, next) => {
 };
 
 exports.createPlaylist = async (req, res, next) => {
+  if (process.env.YT_PLAYLIST_ID) {
+    req.playlistId = process.env.YT_PLAYLIST_ID;
+    return next();
+  }
+
   const service = google.youtube({ version: 'v3', auth: req.oauth2Client });
-  service.playlists.insert({
+  const response = await service.playlists.insert({
     part: ['snippet', 'status'],
     requestBody: {
       snippet: {
@@ -89,7 +97,46 @@ exports.createPlaylist = async (req, res, next) => {
       },
     },
   });
+  req.playlistId = response.data.id;
+  process.env.YT_PLAYLIST_ID = response.data.id;
   next();
 };
 
-exports.importTracks = async (req, res, nex) => {};
+const searchTrack = async (service, req) => {
+  const response = await service.search.list({
+    part: 'snippet',
+    q: req.q,
+    maxResults: 1,
+  });
+  if (response.data.items.length > 0) return response.data.items[0].id.videoId;
+  return null;
+};
+
+const insertPlaylistItem = async (service, videoId, req) => {
+  service.playlistItems.insert({
+    part: 'snippet',
+    requestBody: {
+      snippet: {
+        playlistId: req.playlistId,
+        resourceId: {
+          kind: 'youtube#video',
+          videoId: videoId,
+        },
+      },
+    },
+  });
+};
+
+// hasn't been tested yet
+exports.importTracks = async (req, res, nex) => {
+  const service = google.youtube({ version: 'v3', auth: req.oauth2Client });
+  const pipeline = fsc
+    .createReadStream('tracks.json')
+    .pipe(StreamArray.withParser());
+
+  for (const { key, value } of pipeline) {
+    req.q = `${value.name} ${value.artists}`;
+    const videoId = await searchTrack(service, req);
+    if (videoId) insertPlaylistItem(service, videoId, req);
+  }
+};

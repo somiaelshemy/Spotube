@@ -31,6 +31,7 @@
     "nodemon": "^3.1.10",
     "querystring": "^0.2.1",
     "request": "^2.88.2",
-    "spotify-web-api-node": "^5.0.2"
+    "spotify-web-api-node": "^5.0.2",
+    "stream-json": "^1.9.1"
   }
 }
