@@ -3,15 +3,14 @@ const request = require('request');
 const querystring = require('querystring');
 
 const utils = require('../utils/utils');
-const ytmusic = require('./ytmusic');
 
 const stream = fs.createWriteStream('./tracks.json', { flags: 'w' });
+stream.write('[\n');
 
-function fetchTracks(
+const fetchTracks = async (
   access_token,
-  url = `https://api.spotify.com/v1/playlists/${process.env.PLAYLIST_ID}/tracks`
-) {
-  if (!url) return;
+  url = `https://api.spotify.com/v1/playlists/${process.env.SPOTIFY_PLAYLIST_ID}/tracks`
+) => {
   const options = {
     url,
     headers: { Authorization: 'Bearer ' + access_token },
@@ -19,17 +18,20 @@ function fetchTracks(
   };
 
   request.get(options, function (error, response, body) {
-    for (const item of body.items) {
+    for (let i = 0; i < body.items.length; i++) {
       const track = {
-        name: item.track.name,
-        artists: item.track.artists.map((artist) => artist.name),
+        name: body.items[i].track.name,
+        artists: body.items[i].track.artists
+          .map((artist) => artist.name)
+          .join(' '),
       };
       stream.write(JSON.stringify(track, null, 2));
+      if (!body.next && i === body.items.length - 1) return stream.end('\n]');
       stream.write(',\n');
     }
     fetchTracks(access_token, body.next);
   });
-}
+};
 
 exports.startScript = async (req, res) => {
   const state = utils.generateRandomString(16);
@@ -92,5 +94,5 @@ exports.handleCallback = async (req, res) => {
       }
     });
   }
-  res.redirect('http://localhost:3000/playlist');
+  res.redirect('http://localhost:3000/ytmusic/playlist');
 };
