@@ -3,12 +3,17 @@ const request = require('request');
 const querystring = require('querystring');
 
 const utils = require('../utils/utils');
+const catchAsync = require('../utils/catchAsync');
+const AppError = require('../utils/appError');
 
-const stream = fs.createWriteStream('./tracks.json', { flags: 'w' });
-stream.write('[\n');
+const stream = fs.existsSync('./tracks.json')
+  ? null
+  : fs.createWriteStream('./tracks.json', { flags: 'w' });
+if (stream) stream.write('[\n');
 
 const fetchTracks = async (
   access_token,
+  next,
   url = `https://api.spotify.com/v1/playlists/${process.env.SPOTIFY_PLAYLIST_ID}/tracks`
 ) => {
   const options = {
@@ -18,6 +23,7 @@ const fetchTracks = async (
   };
 
   request.get(options, function (error, response, body) {
+    if (error) throw new AppError(error.message, error.statusCode);
     for (let i = 0; i < body.items.length; i++) {
       const track = {
         name: body.items[i].track.name,
@@ -29,11 +35,11 @@ const fetchTracks = async (
       if (!body.next && i === body.items.length - 1) return stream.end('\n]');
       stream.write(',\n');
     }
-    fetchTracks(access_token, body.next);
+    fetchTracks(access_token, next, body.next);
   });
 };
 
-exports.startScript = async (req, res) => {
+exports.startScript = catchAsync(async (req, res) => {
   const state = utils.generateRandomString(16);
   res.cookie('spotify_auth_state', state);
   res.redirect(
@@ -46,9 +52,9 @@ exports.startScript = async (req, res) => {
         state: state,
       })
   );
-};
+});
 
-exports.handleCallback = async (req, res) => {
+exports.handleCallback = catchAsync(async (req, res, next) => {
   const storedState = req.cookies ? req.cookies['spotify_auth_state'] : null;
 
   if (!storedState || storedState !== req.query.state) {
@@ -81,7 +87,8 @@ exports.handleCallback = async (req, res) => {
     };
 
     request.post(authOptions, function (error, response, body) {
-      if (!error && response.statusCode === 200) {
+      if (error) return next(new AppError(error.message, error.statusCode));
+      if (response.statusCode === 200) {
         var access_token = body.access_token;
         var options = {
           url: `https://api.spotify.com/v1/me`,
@@ -89,10 +96,10 @@ exports.handleCallback = async (req, res) => {
           json: true,
         };
         request.get(options, function () {
-          fetchTracks(access_token);
+          if (stream) fetchTracks(access_token, next);
         });
       }
     });
   }
   res.redirect('http://localhost:3000/ytmusic/playlist');
-};
+});
