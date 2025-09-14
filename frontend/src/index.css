@@ -1,0 +1,139 @@
+:root {
+  --color-bg: #121212; /* background */
+  --color-card: #2c2b2b; /* list item background */
+  --color-accent: #1db954; /* primary accent (buttons, hover) */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #b3b3b3;
+  --color-error: #e02424; /* error/remove button */
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body,
+* {
+  margin: 0px;
+  padding: 0px;
+  color: var(--color-text-primary);
+  font-family: "Inter", sans-serif;
+}
+
+h3,
+i {
+  color: var(--color-text-secondary);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--color-bg);
+  min-height: 100vh;
+}
+
+.album-cover {
+  width: 48px;
+  height: 48px;
+  border-radius: 3px;
+  margin-right: 15px;
+}
+
+ul {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 80%;
+  background-color: var(--color-card);
+  border-radius: 10px;
+  margin-bottom: 30px;
+}
+
+li {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px;
+  padding: 10px;
+  border-radius: 3px;
+}
+
+.album-track-container {
+  display: flex;
+  align-items: center;
+}
+
+.remove-btn {
+  background-color: var(--color-error);
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  padding: 7px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.remove-btn:hover {
+  background-color: #8d1515;
+  transform: scale(1.05);
+}
+
+form input {
+  width: 100%;
+  padding: 5px;
+  border: none;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  margin-right: 10px;
+}
+
+form {
+  padding: 10px;
+  background-color: var(--list-item-color);
+}
+
+input {
+  color: var(--color-card);
+}
+
+.confirm-btn {
+  padding: 10px;
+  border-radius: 10px;
+  background-color: var(--color-accent);
+  border: none;
+  text-align: center;
+  display: flex;
+  justify-self: end;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.confirm-btn:hover {
+  background-color: #158a3e;
+  transform: scale(1.05);
+}
+
+.floating-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 20px;
+}
